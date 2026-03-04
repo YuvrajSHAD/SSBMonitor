@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSB INTEL MONITOR</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700&display=swap');
+
+:root {
+  --bg: #080c10;
+  --bg2: #0c1318;
+  --bg3: #111820;
+  --border: #1a2d20;
+  --green: #00ff88;
+  --green2: #00cc66;
+  --green3: #009944;
+  --amber: #ffcc00;
+  --red: #ff3344;
+  --blue: #00aaff;
+  --dim: #3a5a44;
+  --text: #c8e0d0;
+  --text2: #6a9a7a;
+  --font-mono: 'Share Tech Mono', monospace;
+  --font-ui: 'Rajdhani', sans-serif;
+  --font-condensed: 'Barlow Condensed', sans-serif;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:var(--font-ui); }
+
+/* Scanline overlay */
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,136,0.015) 2px, rgba(0,255,136,0.015) 4px);
+  pointer-events:none; z-index:9999;
+}
+
+/* ── HEADER ── */
+#header {
+  height:46px;
+  background: linear-gradient(90deg, #080c10, #0c1a14, #080c10);
+  border-bottom: 1px solid var(--green3);
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 0 16px;
+  flex-shrink:0;
+  position:relative;
+  z-index:100;
+}
+#header::after {
+  content:'';
+  position:absolute; bottom:0; left:0; right:0;
+  height:1px;
+  background: linear-gradient(90deg, transparent, var(--green), transparent);
+  animation: scanH 3s linear infinite;
+}
+@keyframes scanH { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+
+.logo {
+  font-family:var(--font-mono);
+  font-size:0.85rem;
+  color:var(--green);
+  letter-spacing:3px;
+  display:flex; align-items:center; gap:10px;
+}
+.logo-bracket { color:var(--green3); }
+.blink { animation: blink 1.2s step-end infinite; }
+@keyframes blink { 50%{opacity:0} }
+
+.header-center {
+  font-family:var(--font-condensed);
+  font-size:1.3rem; font-weight:700;
+  letter-spacing:6px;
+  color:var(--amber);
+  text-transform:uppercase;
+}
+
+.header-right {
+  display:flex; align-items:center; gap:16px;
+  font-family:var(--font-mono); font-size:0.7rem; color:var(--text2);
+}
+.status-pill {
+  padding:3px 10px; border-radius:2px;
+  border:1px solid var(--green3);
+  color:var(--green); font-size:0.65rem;
+  background: rgba(0,255,136,0.07);
+}
+
+/* ── TICKER ── */
+#ticker-bar {
+  height:28px;
+  background: rgba(0,255,136,0.06);
+  border-bottom:1px solid var(--border);
+  overflow:hidden; display:flex; align-items:center;
+  flex-shrink:0;
+}
+.ticker-label {
+  font-family:var(--font-mono); font-size:0.65rem;
+  color:var(--bg); background:var(--amber);
+  padding:0 10px; height:100%;
+  display:flex; align-items:center;
+  letter-spacing:2px; flex-shrink:0;
+  font-weight:700;
+}
+.ticker-scroll {
+  white-space:nowrap;
+  font-family:var(--font-mono); font-size:0.68rem;
+  color:var(--green2);
+  animation: scroll-ticker 60s linear infinite;
+  padding-left:30px;
+}
+@keyframes scroll-ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+
+/* ── MAIN LAYOUT ── */
+#main {
+  display:grid;
+  grid-template-columns: 280px 1fr 260px;
+  grid-template-rows: 1fr;
+  height: calc(100vh - 74px);
+  gap:0;
+  overflow:hidden;
+}
+
+/* ── PANELS ── */
+.panel {
+  border-right:1px solid var(--border);
+  display:flex; flex-direction:column;
+  overflow:hidden;
+}
+.panel:last-child { border-right:none; }
+
+.panel-header {
+  padding:8px 12px;
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  flex-shrink:0;
+  background: rgba(0,255,136,0.04);
+}
+.panel-title {
+  font-family:var(--font-condensed);
+  font-size:0.72rem; font-weight:700;
+  letter-spacing:3px; color:var(--amber);
+  text-transform:uppercase;
+}
+.panel-count {
+  font-family:var(--font-mono); font-size:0.65rem;
+  color:var(--green3); background:rgba(0,255,136,0.1);
+  padding:2px 6px; border-radius:2px;
+}
+
+.panel-body {
+  flex:1; overflow-y:auto;
+  padding:0;
+}
+.panel-body::-webkit-scrollbar { width:3px; }
+.panel-body::-webkit-scrollbar-track { background:transparent; }
+.panel-body::-webkit-scrollbar-thumb { background:var(--green3); border-radius:2px; }
+
+/* ── LEFT: CATEGORY FILTER + SSB INTEL ── */
+.cat-btn {
+  width:100%; padding:8px 12px;
+  background:none; border:none; border-bottom:1px solid var(--border);
+  color:var(--text2); font-family:var(--font-condensed);
+  font-size:0.82rem; font-weight:600; letter-spacing:2px;
+  text-align:left; cursor:pointer;
+  display:flex; align-items:center; justify-content:space-between;
+  transition:all 0.15s;
+}
+.cat-btn:hover, .cat-btn.active {
+  background:rgba(0,255,136,0.07);
+  color:var(--green);
+}
+.cat-btn .cat-icon { font-size:0.9rem; }
+.cat-btn .cat-count {
+  font-family:var(--font-mono); font-size:0.62rem;
+  color:var(--green3);
+}
+
+/* ALERT LEVELS */
+.alert-high { border-left:3px solid var(--red) !important; }
+.alert-med  { border-left:3px solid var(--amber) !important; }
+.alert-low  { border-left:3px solid var(--green3) !important; }
+
+/* ── CENTER: NEWS FEED ── */
+.news-item {
+  padding:10px 12px;
+  border-bottom:1px solid var(--border);
+  cursor:pointer;
+  transition:background 0.1s;
+  position:relative;
+}
+.news-item:hover { background:rgba(0,255,136,0.05); }
+
+.news-meta {
+  display:flex; align-items:center; gap:8px;
+  margin-bottom:4px;
+}
+.news-source {
+  font-family:var(--font-mono); font-size:0.6rem;
+  color:var(--green3); text-transform:uppercase; letter-spacing:1px;
+}
+.news-time {
+  font-family:var(--font-mono); font-size:0.58rem; color:var(--dim);
+}
+.news-category {
+  font-size:0.58rem; padding:1px 5px; border-radius:2px;
+  font-family:var(--font-mono); text-transform:uppercase; letter-spacing:1px;
+  margin-left:auto;
+}
+.cat-defence { background:rgba(255,51,68,0.2); color:var(--red); }
+.cat-geopolitics { background:rgba(0,170,255,0.2); color:var(--blue); }
+.cat-india { background:rgba(255,204,0,0.2); color:var(--amber); }
+.cat-economy { background:rgba(0,255,136,0.15); color:var(--green2); }
+.cat-social { background:rgba(160,120,255,0.2); color:#aa88ff; }
+
+.news-title {
+  font-family:var(--font-condensed);
+  font-size:0.92rem; font-weight:600;
+  color:var(--text); line-height:1.35;
+  margin-bottom:4px;
+}
+.news-summary {
+  font-size:0.73rem; color:var(--text2);
+  line-height:1.5; display:none;
+}
+.news-item.expanded .news-summary { display:block; }
+
+.ssb-score {
+  display:flex; align-items:center; gap:4px; margin-top:5px;
+}
+.ssb-label {
+  font-family:var(--font-mono); font-size:0.58rem; color:var(--dim);
+  letter-spacing:1px;
+}
+.ssb-bar-wrap {
+  flex:1; height:3px; background:rgba(255,255,255,0.08); border-radius:2px;
+}
+.ssb-bar {
+  height:100%; border-radius:2px;
+  transition:width 0.5s;
+}
+.score-high .ssb-bar { background:var(--red); }
+.score-med  .ssb-bar { background:var(--amber); }
+.score-low  .ssb-bar { background:var(--green3); }
+.ssb-num {
+  font-family:var(--font-mono); font-size:0.6rem; font-weight:700; min-width:24px;
+}
+.score-high .ssb-num { color:var(--red); }
+.score-med  .ssb-num { color:var(--amber); }
+.score-low  .ssb-num { color:var(--green3); }
+
+/* GD Tags */
+.gd-tag {
+  display:inline-block; font-size:0.58rem; padding:1px 6px;
+  border:1px solid var(--green3); border-radius:2px;
+  color:var(--green3); font-family:var(--font-mono);
+  margin:3px 2px 0 0; cursor:pointer;
+  transition:all 0.15s;
+}
+.gd-tag:hover { background:var(--green3); color:var(--bg); }
+
+/* ── RIGHT: GD PANEL + QUICK FACTS ── */
+.gd-item {
+  padding:9px 12px;
+  border-bottom:1px solid var(--border);
+  cursor:pointer;
+  transition:background 0.1s;
+}
+.gd-item:hover { background:rgba(0,255,136,0.05); }
+.gd-topic {
+  font-family:var(--font-condensed); font-size:0.85rem; font-weight:600;
+  color:var(--text); line-height:1.3; margin-bottom:3px;
+}
+.gd-hint {
+  font-size:0.68rem; color:var(--text2); line-height:1.4;
+  display:none;
+}
+.gd-item.expanded .gd-hint { display:block; }
+.gd-heat {
+  display:flex; gap:2px; margin-top:4px;
+}
+.heat-dot {
+  width:6px; height:6px; border-radius:50%;
+  background:var(--border);
+}
+.heat-dot.on { background:var(--red); box-shadow:0 0 4px var(--red); }
+
+/* QUICK FACT */
+.qfact {
+  padding:8px 12px;
+  border-bottom:1px solid var(--border);
+  font-size:0.72rem;
+}
+.qfact-label {
+  font-family:var(--font-mono); font-size:0.58rem;
+  color:var(--green3); letter-spacing:2px;
+  margin-bottom:3px;
+}
+.qfact-val { color:var(--amber); font-weight:600; font-family:var(--font-condensed); font-size:0.88rem; }
+.qfact-sub { color:var(--text2); font-size:0.68rem; }
+
+/* Loading pulse */
+.loading-row {
+  padding:12px;
+  font-family:var(--font-mono); font-size:0.7rem; color:var(--green3);
+  animation:blink 1s step-end infinite;
+}
+
+/* DETAIL OVERLAY */
+#detail-overlay {
+  display:none;
+  position:fixed; inset:0;
+  background:rgba(8,12,16,0.96);
+  z-index:500;
+  padding:20px;
+  overflow-y:auto;
+}
+#detail-overlay.show { display:block; }
+#detail-box {
+  max-width:680px; margin:0 auto;
+  background:var(--bg3);
+  border:1px solid var(--green3);
+  border-radius:4px;
+  padding:24px;
+}
+#detail-box h2 {
+  font-family:var(--font-condensed); font-size:1.4rem; font-weight:700;
+  color:var(--amber); margin-bottom:12px; letter-spacing:2px;
+}
+#detail-box .detail-body {
+  font-size:0.82rem; line-height:1.7; color:var(--text);
+}
+#detail-box .detail-body h4 {
+  color:var(--green); font-family:var(--font-mono); font-size:0.72rem;
+  letter-spacing:2px; margin:14px 0 6px; text-transform:uppercase;
+}
+#detail-box .detail-body p { margin-bottom:8px; color:var(--text2); }
+#detail-box .detail-body strong { color:var(--text); }
+.close-detail {
+  float:right; background:none; border:1px solid var(--dim);
+  color:var(--text2); padding:4px 12px; cursor:pointer;
+  font-family:var(--font-mono); font-size:0.7rem; border-radius:2px;
+}
+.close-detail:hover { border-color:var(--green); color:var(--green); }
+
+/* Status bar */
+#statusbar {
+  position:fixed; bottom:0; left:0; right:0;
+  height:22px;
+  background:var(--bg2);
+  border-top:1px solid var(--border);
+  display:flex; align-items:center;
+  padding:0 12px; gap:20px;
+  z-index:200;
+  font-family:var(--font-mono); font-size:0.6rem; color:var(--dim);
+}
+.sb-item { display:flex; align-items:center; gap:5px; }
+.sb-dot { width:5px; height:5px; border-radius:50%; }
+.sb-live { background:var(--green); animation:blink 1.5s step-end infinite; }
+.sb-warn { background:var(--amber); }
+.sb-alert { background:var(--red); animation:blink 0.8s step-end infinite; }
+
+/* Refresh btn */
+.refresh-btn {
+  background:none; border:1px solid var(--green3);
+  color:var(--green3); padding:2px 8px;
+  font-family:var(--font-mono); font-size:0.6rem;
+  cursor:pointer; border-radius:2px;
+}
+.refresh-btn:hover { background:var(--green3); color:var(--bg); }
+.spinning { animation:spin 1s linear infinite; }
+@keyframes spin { 100%{transform:rotate(360deg)} }
+
+/* Fade in */
+.fade-in { animation:fadeIn 0.3s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+
+/* Responsive adjustments */
+@media(max-width:768px){
+  #main { grid-template-columns:1fr; }
+  .panel:not(#center-panel){ display:none; }
+  #center-panel { display:flex; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="logo">
+    <span class="logo-bracket">[</span>
+    SSB<span class="blink">_</span>INTEL
+    <span class="logo-bracket">]</span>
+  </div>
+  <div class="header-center">SITUATION MONITOR</div>
+  <div class="header-right">
+    <div id="clock" style="color:var(--green)">--:--:--</div>
+    <div class="status-pill">● LIVE FEED</div>
+    <button class="refresh-btn" onclick="loadAllFeeds()" id="refresh-btn">↻ REFRESH</button>
+  </div>
+</div>
+
+<!-- TICKER -->
+<div id="ticker-bar">
+  <div class="ticker-label">FLASH</div>
+  <div class="ticker-scroll" id="ticker-text">
+    ● Loading latest SSB-relevant news... ● Please wait while feeds are fetched... ● Iran-Israel Operation Epic Fury ongoing ● India GDP growth 6.4% FY26 ● Operation Sindoor: India strikes Pakistan terror camps ● Tejas Mk2 prototype rollout ● India-China LAC standoff update ● NATO summit key outcomes ● BRICS expansion 2025 updates &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    ● Loading latest SSB-relevant news... ● Please wait while feeds are fetched... ● Iran-Israel Operation Epic Fury ongoing ● India GDP growth 6.4% FY26 ● Operation Sindoor: India strikes Pakistan terror camps ● Tejas Mk2 prototype rollout ● India-China LAC standoff update ● NATO summit key outcomes ● BRICS expansion 2025 updates &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- LEFT PANEL: Categories + Quick Facts -->
+  <div class="panel" id="left-panel">
+    <div class="panel-header">
+      <span class="panel-title">⬡ FILTER BY SECTOR</span>
+    </div>
+    <div class="panel-body">
+      <button class="cat-btn active" onclick="filterNews('all',this)">
+        <span><span class="cat-icon">◈</span> ALL INTEL</span>
+        <span class="cat-count" id="cnt-all">0</span>
+      </button>
+      <button class="cat-btn" onclick="filterNews('defence',this)">
+        <span><span class="cat-icon">⚔</span> DEFENCE & MILITARY</span>
+        <span class="cat-count" id="cnt-defence">0</span>
+      </button>
+      <button class="cat-btn" onclick="filterNews('geopolitics',this)">
+        <span><span class="cat-icon">◎</span> GEOPOLITICS</span>
+        <span class="cat-count" id="cnt-geopolitics">0</span>
+      </button>
+      <button class="cat-btn" onclick="filterNews('india',this)">
+        <span><span class="cat-icon">◉</span> INDIA AFFAIRS</span>
+        <span class="cat-count" id="cnt-india">0</span>
+      </button>
+      <button class="cat-btn" onclick="filterNews('economy',this)">
+        <span><span class="cat-icon">▲</span> ECONOMY & TRADE</span>
+        <span class="cat-count" id="cnt-economy">0</span>
+      </button>
+      <button class="cat-btn" onclick="filterNews('social',this)">
+        <span><span class="cat-icon">◆</span> SOCIAL & POLICY</span>
+        <span class="cat-count" id="cnt-social">0</span>
+      </button>
+
+      <!-- Divider -->
+      <div style="padding:8px 12px 4px;font-family:var(--font-mono);font-size:0.6rem;color:var(--dim);letter-spacing:2px;border-bottom:1px solid var(--border);">QUICK INTEL</div>
+
+      <div class="qfact">
+        <div class="qfact-label">INDIA DEFENCE BUDGET</div>
+        <div class="qfact-val">₹6.21 Lakh Cr</div>
+        <div class="qfact-sub">FY 2024-25 • 2.4% of GDP</div>
+      </div>
+      <div class="qfact">
+        <div class="qfact-label">ARMY CHIEF</div>
+        <div class="qfact-val">Gen Upendra Dwivedi</div>
+        <div class="qfact-sub">Since June 2024</div>
+      </div>
+      <div class="qfact">
+        <div class="qfact-label">CDS</div>
+        <div class="qfact-val">Gen Anil Chauhan</div>
+        <div class="qfact-sub">Chief of Defence Staff</div>
+      </div>
+      <div class="qfact">
+        <div class="qfact-label">ACTIVE CONFLICT ZONES</div>
+        <div class="qfact-val" style="color:var(--red)">Iran-Israel, Gaza, Ukraine</div>
+        <div class="qfact-sub">As of Mar 2026</div>
+      </div>
+      <div class="qfact">
+        <div class="qfact-label">OIL IMPORT DEPENDENCY</div>
+        <div class="qfact-val">85%</div>
+        <div class="qfact-sub">India from Gulf region</div>
+      </div>
+      <div class="qfact">
+        <div class="qfact-label">NRI IN GULF</div>
+        <div class="qfact-val">8+ Million</div>
+        <div class="qfact-sub">UAE, Saudi, Qatar, Kuwait</div>
+      </div>
+      <div class="qfact">
+        <div class="qfact-label">INDIA NUCLEAR WARHEADS</div>
+        <div class="qfact-val">~172 (est.)</div>
+        <div class="qfact-sub">SIPRI 2025 estimate</div>
+      </div>
+      <div class="qfact">
+        <div class="qfact-label">UN SECURITY COUNCIL</div>
+        <div class="qfact-val">India — UNSC Bid Active</div>
+        <div class="qfact-sub">Permanent seat campaign</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER PANEL: Live News Feed -->
+  <div class="panel" id="center-panel" style="border-right:1px solid var(--border)">
+    <div class="panel-header">
+      <span class="panel-title">📡 LIVE INTEL FEED</span>
+      <span class="panel-count" id="news-count">LOADING...</span>
+    </div>
+    <div class="panel-body" id="news-feed">
+      <div class="loading-row">▌ ESTABLISHING SECURE FEED...</div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL: GD Topics -->
+  <div class="panel" id="right-panel">
+    <div class="panel-header">
+      <span class="panel-title">🎯 HOT GD TOPICS</span>
+      <span class="panel-count" id="gd-count">15</span>
+    </div>
+    <div class="panel-body" id="gd-panel">
+      <!-- GD topics injected here -->
+    </div>
+  </div>
+
+</div>
+
+<!-- STATUS BAR -->
+<div id="statusbar">
+  <div class="sb-item"><div class="sb-dot sb-live"></div> FEED ACTIVE</div>
+  <div class="sb-item"><div class="sb-dot sb-alert"></div> <span style="color:var(--red)">IRAN-ISRAEL: ONGOING</span></div>
+  <div class="sb-item"><div class="sb-dot sb-warn"></div> RED SEA: DISRUPTED</div>
+  <div class="sb-item"><div class="sb-dot sb-warn"></div> LAC: MONITORING</div>
+  <div class="sb-item" style="margin-left:auto">SSB ALLAHABAD • MAR 2026</div>
+</div>
+
+<!-- DETAIL OVERLAY -->
+<div id="detail-overlay">
+  <div id="detail-box">
+    <button class="close-detail" onclick="closeDetail()">✕ CLOSE</button>
+    <div id="detail-content"></div>
+  </div>
+</div>
+
+<script>
+// ── CLOCK ──────────────────────────────────────────────────────────────────
+function updateClock(){
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleTimeString('en-IN',{hour12:false});
+}
+setInterval(updateClock, 1000); updateClock();
+
+// ── GD TOPICS (curated, SSB-specific) ──────────────────────────────────────
+const gdTopics = [
+  { topic:"Iran-Israel War: Is preemptive strike justified?", heat:5, hint:"Discuss Article 51 UN Charter, Iran's nuclear threat, India's strategic autonomy. Key: balanced view — acknowledge both Israel's security concerns AND international law violations.", cat:"geopolitics" },
+  { topic:"Operation Epic Fury: Impact on India's energy security", heat:5, hint:"Iran war → oil price spike → India imports 85% oil → Rupee pressure → inflation. Mention Chabahar port risk, 8M NRIs affected, strategic petroleum reserves, renewable energy urgency.", cat:"india" },
+  { topic:"Should India join QUAD as a full military alliance?", heat:4, hint:"Strategic autonomy vs security guarantee. QUAD benefits: counters China. Risk: provokes China, Russia. India's doctrine of non-alignment. Position: deeper cooperation yes, binding treaty no.", cat:"defence" },
+  { topic:"Women in combat roles in Indian Armed Forces", heat:4, hint:"Recent inclusion in NDA, military police combat roles. Physical standards debate. Israel model. Psychological suitability not physical. India's progressive steps vs remaining barriers.", cat:"social" },
+  { topic:"Aatmanirbhar Bharat in defence: Reality vs aspiration", heat:4, hint:"India was world's largest arms importer. Now shifting. Tejas, INS Vikrant, Arjun tank. HAL, DRDO progress. LCA Mk2, AMCA. Still dependent on Russia for 50%+. Long road ahead.", cat:"defence" },
+  { topic:"China's debt trap diplomacy — threat to India?", heat:4, hint:"BRI projects: Sri Lanka Hambantota, Pakistan Gwadar, Nepal. India's neighbourhood policy response. India's own investment in Bangladesh, Bhutan, Maldives. Counter-narrative needed.", cat:"geopolitics" },
+  { topic:"Should India get a permanent UNSC seat?", heat:3, hint:"India: 1.4B people, largest democracy, global south voice, nuclear power. Opposition: China blocks. Reform needed. G4 (India, Germany, Brazil, Japan) effort. India's peacekeeping record.", cat:"india" },
+  { topic:"Agnipath scheme: Reform or risk?", heat:4, hint:"4-year short service, 25% retention. Benefits: young military, savings. Critics: job uncertainty, training investment wasted, veterans unemployed at 21. Army morale concerns. Recent violence.", cat:"defence" },
+  { topic:"Cryptocurrency and national security", heat:3, hint:"Terror financing through crypto. Dark web transactions. FATF concerns. India's stance — tax but not ban. Central Bank Digital Currency (e-Rupee) as alternative. Regulatory balance.", cat:"economy" },
+  { topic:"India's role in Russia-Ukraine war mediation", heat:3, hint:"India buys Russian oil — independence. PM Modi's visit to both Kyiv and Moscow. 'This is not an era of war' statement. India as bridge between Global South and West. Genuine peacemaker role.", cat:"geopolitics" },
+  { topic:"Cyber warfare: The new frontier of conflict", heat:4, hint:"Stuxnet destroyed Iran nuclear centrifuges. India's critical infrastructure vulnerable. NCIIPC. China's APT attacks on Indian power grids (Mumbai blackout 2020). Need for Cyber Command.", cat:"defence" },
+  { topic:"Climate change as a national security threat", heat:3, hint:"Himalayan glacier melt → water wars. Sea level rise threatens coastal cities, naval bases. Extreme weather disrupts supply chains. IPCC + Indian military assessment. Soldier performance in extreme heat.", cat:"social" },
+  { topic:"Article 370 removal: 5 years on — has it worked?", heat:3, hint:"Tourism boom, investment increase. But political autonomy reduced. Terrorist incidents continue. Statehood not yet restored. Two sides — development vs democratic rights.", cat:"india" },
+  { topic:"Is Pakistan a failed state?", heat:4, hint:"Economy collapsed, IMF bailout. Political chaos — PM changes. TTP terrorism. Balochistan insurgency. Nuclear weapons security concern. India's stance: engage carefully, don't gloat.", cat:"geopolitics" },
+  { topic:"India's space militarization policy", heat:3, hint:"ASAT test (Mission Shakti 2019). DSA (Defence Space Agency) formed. ISRO commercial arm. Anti-satellite weapons race. Outer Space Treaty 1967. India must lead responsible space norms.", cat:"defence" },
+];
+
+function renderGD(){
+  const panel = document.getElementById('gd-panel');
+  panel.innerHTML = '';
+  gdTopics.forEach((g,i) => {
+    const div = document.createElement('div');
+    div.className = 'gd-item fade-in';
+    div.style.animationDelay = (i*0.04)+'s';
+    const dots = Array.from({length:5},(_,j)=>`<div class="heat-dot ${j<g.heat?'on':''}"></div>`).join('');
+    div.innerHTML = `
+      <div class="gd-topic">${g.topic}</div>
+      <div class="gd-heat">${dots}</div>
+      <div class="gd-hint">${g.hint}</div>
+    `;
+    div.onclick = () => { div.classList.toggle('expanded'); };
+    panel.appendChild(div);
+  });
+  document.getElementById('gd-count').textContent = gdTopics.length;
+}
+
+// ── NEWS DATA: curated + RSS ────────────────────────────────────────────────
+let allNews = [];
+let currentFilter = 'all';
+
+// Curated base news (always available, no network needed)
+const curatedNews = [
+  {
+    title:"Operation Epic Fury: US-Israel strike kills Iran Supreme Leader Khamenei",
+    source:"SSB INTEL", time:"Feb 28, 2026", category:"geopolitics",
+    score:98, scoreClass:"score-high",
+    summary:"Joint US-Israel operation launched Feb 28, 2026. Targets: Tehran, Fordow nuclear bunker, IRGC HQ, naval bases. Khamenei, Defense Minister, IRGC Commander all killed. Iran retaliated by firing missiles at US bases in Qatar, Kuwait, UAE, Bahrain, Jordan. 11 airspaces closed. Indian flights cancelled.",
+    gdTags:["Iran-Israel","Nuclear Non-Proliferation","India's Strategic Autonomy","Gulf Security"],
+    detail:{
+      title:"Operation Epic Fury — Complete SSB Briefing",
+      body:`<h4>WHAT HAPPENED</h4>
+<p>On Feb 28, 2026, the United States and Israel launched Operation Epic Fury — a massive coordinated military strike across Iran. Unlike the June 2025 Operation Midnight Hammer (which targeted only nuclear sites), Epic Fury's stated goals were: (1) destroy nuclear program, (2) destroy military infrastructure, (3) achieve REGIME CHANGE.</p>
+<h4>KEY TARGETS HIT</h4>
+<p><strong>Tehran:</strong> Government buildings, IRGC HQ, Defense Ministry.<br>
+<strong>Fordow:</strong> Underground nuclear bunker (GBU-57 bunker busters used).<br>
+<strong>Natanz:</strong> Main uranium enrichment facility.<br>
+<strong>Bandar Abbas:</strong> Iran's main naval base — navy largely destroyed.<br>
+<strong>Missile factories:</strong> Multiple sites across western Iran.</p>
+<h4>CASUALTIES</h4>
+<p>Khamenei (Supreme Leader) killed. His daughter also killed. Defense Minister killed. IRGC Commander killed. National Security Council Secretary killed. Thousands of military casualties.</p>
+<h4>IRAN'S RETALIATION</h4>
+<p>Iran fired ballistic missiles at US military bases: Al Udeid Qatar, Camp Arifjan Kuwait, Al Dhafra UAE, US Navy HQ Bahrain, Muwaffaq Salti Jordan. Also fired at Israeli cities. Iron Dome, Arrow-3 intercepted most. Some US personnel casualties.</p>
+<h4>INDIA'S IMPACT</h4>
+<p>8M+ Indians in Gulf at risk. Air India/IndiGo/SpiceJet cancelled all Gulf routes. PV Sindhu stranded in Dubai. Oil prices spiked. Rupee under pressure. Chabahar Port investment in jeopardy.</p>
+<h4>SSB ANGLE</h4>
+<p><strong>India's position:</strong> Strategic Autonomy. "Call for restraint and dialogue. Respect sovereignty of all nations." India has defense ties with Israel AND energy/Chabahar ties with Iran — cannot take sides.<br>
+<strong>IO Counter-Q:</strong> "Was attack justified?" → Both sides have merit. Israel: self-defense, imminent nuclear threat. Critics: attacked during active diplomacy, violates UN Charter norms. UN SG condemned both sides.</p>`
+    }
+  },
+  {
+    title:"Red Sea crisis: Houthi attacks force ships to Cape of Good Hope reroute",
+    source:"SSB INTEL", time:"Jan 2026", category:"geopolitics",
+    score:88, scoreClass:"score-high",
+    summary:"Iran-backed Houthi rebels in Yemen have attacked 100+ ships in Red Sea since Oct 2023. Global shipping rerouting around Africa — adding 2 weeks delivery time and 40% higher costs. India-Europe trade severely impacted. Suez Canal revenue dropped 60%.",
+    gdTags:["Maritime Security","India Trade","Houthis","Red Sea"],
+    detail:{title:"Red Sea Crisis — SSB Brief",body:`<h4>WHY THIS MATTERS FOR INDIA</h4><p>India's trade with Europe goes via Red Sea → Suez Canal. Houthi disruption forces ships around Africa, adding 2+ weeks and massive costs to every shipment. India's exports to Europe and imports of machinery, medicines affected.</p><h4>HOUTHIS: WHO ARE THEY?</h4><p>Shia rebel group in Yemen backed by Iran with weapons and training. Control northern Yemen and the Bab el-Mandeb strait. Attacking ships they claim are "Israel-linked." US-UK military response: bombing Houthi positions since Jan 2024 — limited success.</p><h4>SSB TALKING POINTS</h4><p>India needs stronger Navy to protect sea lanes. India is QUAD member — maritime security cooperation. INS Vikrant carrier group patrolling Arabian Sea. India's GDP depends on sea trade — 95% of trade volume by sea.</p>`}
+  },
+  {
+    title:"Tejas Mk2 prototype rollout — India's biggest indigenous fighter jet leap",
+    source:"SSB INTEL", time:"2025-26", category:"defence",
+    score:85, scoreClass:"score-high",
+    summary:"HAL rolls out Tejas Mk2 prototype — larger, more powerful than Mk1A. Twin engine considered. Replaces MiG-29, Jaguar fleet. 220+ aircraft order expected from IAF. Part of Aatmanirbhar Bharat defence push. AMCA (5th gen) stealth fighter in parallel development.",
+    gdTags:["Aatmanirbhar Defence","IAF Modernization","HAL","Make in India"],
+    detail:{title:"Tejas & India's Indigenous Defence",body:`<h4>TEJAS MK2 KEY FACTS</h4><p>Heavier, longer range than Mk1A. Active electronically scanned array (AESA) radar. BVR missiles. Designed to replace Jaguars and MiG-29s. HAL Bangalore production. Critical for IAF's 42-squadron goal (currently ~31).</p><h4>BROADER PICTURE</h4><p>India was world's largest arms importer for years. Now pushing hard: INS Vikrant (aircraft carrier), Arjun MkII tank, Pralay ballistic missile, Nirbhay cruise missile, Akash air defence. Defence exports crossed $2.5B in FY24.</p><h4>SSB ANGLE</h4><p>Aatmanirbharta = national security + economic growth. Reduces foreign exchange outflow. Creates high-skill jobs. Reduces supply chain vulnerability in conflict. But: quality and timeline challenges remain with HAL/DRDO.</p>`}
+  },
+  {
+    title:"India-China LAC: Patrolling agreement holds but tensions simmer",
+    source:"SSB INTEL", time:"2025-26", category:"defence",
+    score:90, scoreClass:"score-high",
+    summary:"India-China patrolling agreement reached Oct 2024 for Depsang and Demchok. Buffer zones being dismantled. But underlying territorial dispute unresolved. Galwan 2020 legacy remains. China building villages on LAC. India's infrastructure push in border areas accelerating.",
+    gdTags:["India-China","LAC","Border Dispute","Strategic Autonomy"],
+    detail:{title:"India-China LAC Situation",body:`<h4>CURRENT STATUS (2026)</h4><p>After Galwan clash June 2020 (20 Indian soldiers killed, India's first battle deaths in 45 years), relations froze. Oct 2024 patrolling agreement restored patrolling at Depsang Plains and Demchok. But: China has not vacated all incursions from 2020. Infrastructure buildup on Chinese side continues.</p><h4>INDIA'S RESPONSE</h4><p>Accelerated border road construction. New military stations in Ladakh. Raised mountain strike corps. Additional fighter squadrons in northeast. Diplomatic: disengagement at friction points while maintaining trade relations cautiously.</p><h4>SSB ANGLE</h4><p>Two-front threat: China + Pakistan simultaneously. India needs integrated theatre commands. Atmanirbhar defence critical — can't depend on Russian weapons if Russia supports China. Strategic autonomy means maintaining US defence partnership without full dependence.</p>`}
+  },
+  {
+    title:"Agnipath scheme protests resurface: Rajasthan, Bihar see demonstrations",
+    source:"SSB INTEL", time:"Feb 2026", category:"social",
+    score:78, scoreClass:"score-med",
+    summary:"Agnipath military recruitment scheme (4-year service, 25% permanent retention) continues to face criticism. Protests in Rajasthan and Bihar over job security concerns. Government defends: modernizes military age profile, saves pension costs. SSB aspirants directly affected.",
+    gdTags:["Agnipath","Military Reform","Youth Employment","Armed Forces"],
+    detail:{title:"Agnipath Scheme — SSB Must Know",body:`<h4>WHAT IS AGNIPATH?</h4><p>Launched June 2022. Recruits 'Agniveers' for 4 years. After 4 years: 25% kept permanently, 75% discharged with ₹11-12 lakh package and 'Agniveer' certificate. Age: 17.5 to 23 years.</p><h4>GOVERNMENT'S RATIONALE</h4><p>Average age of Indian soldier was 32 — too old. Now bringing it to 26. Massive pension savings (₹900 crore pension bill was unsustainable). Disciplined youth re-entering civilian workforce. Government jobs reserved for Agniveers.</p><h4>CRITICS SAY</h4><p>75% left without guaranteed jobs at age 21-22. Short training means less combat effectiveness. Unit cohesion suffers — bonds built over years. Veterans groups opposed. Political parties promised repeal if elected.</p><h4>YOUR SSB ANSWER</h4><p>Balanced: Reform is necessary but implementation needs improvement. 25% retention is too low — should be 50%. Civilian job reservation for Agniveers must be strengthened. Review after 5 years with data. Don't be extreme either way.</p>`}
+  },
+  {
+    title:"India's GDP growth at 6.4% — remains fastest major economy",
+    source:"SSB INTEL", time:"FY 2025-26", category:"economy",
+    score:72, scoreClass:"score-med",
+    summary:"India GDP growth 6.4% for FY25-26 (IMF estimate). Remains world's fastest growing major economy. Manufacturing sector boost from PLI schemes. Services exports strong. But: rural distress, youth unemployment at 16%, inflation concerns from Gulf oil spike.",
+    gdTags:["India Economy","GDP","Make in India","Development"],
+    detail:{title:"India Economy — SSB Quick Brief",body:`<h4>KEY NUMBERS TO KNOW</h4><p>GDP: ~$3.9 trillion (2025) — 5th largest world. Growth: 6.4% FY26. Defence budget: ₹6.21 lakh crore (2.4% GDP). Forex reserves: ~$650B. UPI transactions: 16B+ monthly. Space economy target: $100B by 2040.</p><h4>STRENGTHS</h4><p>Young population (median age 28). Digital infrastructure (UPI, Aadhaar). Manufacturing push (PLI). Services exports strong. Renewables growth fastest globally.</p><h4>CHALLENGES</h4><p>Youth unemployment 16%. Farmer distress. Infrastructure gaps. Oil import vulnerability. China competition in manufacturing. Gulf crisis → oil inflation.</p>`}
+  },
+  {
+    title:"Pakistan economy in crisis: IMF bailout, political chaos, TTP terrorism",
+    source:"SSB INTEL", time:"2025-26", category:"geopolitics",
+    score:82, scoreClass:"score-high",
+    summary:"Pakistan received $7B IMF bailout 2024. Economy still contracting. Imran Khan in jail. Army running shadow government. TTP terrorist attacks surge in KPK. Balochistan insurgency ongoing. India-Pakistan LoC: relatively calm but cross-border terrorism continues.",
+    gdTags:["India-Pakistan","Pakistan Crisis","LoC","Regional Security"],
+    detail:{title:"Pakistan Situation — SSB Brief",body:`<h4>CURRENT SITUATION</h4><p>Pakistan's economy: inflation peaked at 38% (2023), now ~20%. Forex reserves were critically low. IMF bailout conditions: raise taxes, cut subsidies → public anger. Imran Khan arrested, in jail. Army effectively controls government through 'hybrid regime.'</p><h4>SECURITY</h4><p>TTP (Tehrik-e-Taliban Pakistan) — Afghan Taliban-backed — conducting mass attacks in Pakistan itself. Pakistan created these groups, now they've turned inward. Balochistan insurgency (BLA) attacks on Chinese CPEC projects.</p><h4>INDIA ANGLE</h4><p>India's position: no normalization until Pakistan stops cross-border terrorism. LOC relatively calm post-2021 ceasefire renewal. India-Pakistan trade near zero. Kashmir terrorism attacks continue. India must remain vigilant, not gloat at Pakistan's misery (shows maturity in SSB).</p>`}
+  },
+  {
+    title:"BRICS expansion 2025: New members reshape global power balance",
+    source:"SSB INTEL", time:"2025", category:"geopolitics",
+    score:75, scoreClass:"score-med",
+    summary:"BRICS now includes Saudi Arabia, UAE, Iran, Egypt, Ethiopia, Indonesia. Represents 45% of world population, 35% of global GDP. Challenges US dollar dominance. India's complex position: BRICS member AND Quad member AND Western partner. Strategic autonomy in action.",
+    gdTags:["BRICS","Global Order","Multipolarity","India Foreign Policy"],
+    detail:{title:"BRICS Expansion — SSB Brief",body:`<h4>NEW BRICS MEMBERS</h4><p>Jan 2024 expansion: Saudi Arabia, UAE, Iran, Egypt, Ethiopia. Jan 2025: Indonesia joins. Now BRICS+ has 10 full members and several partner countries. Represents more than G7 in population and PPP GDP.</p><h4>WHAT THIS MEANS</h4><p>Challenge to Western-led international order. Push for de-dollarization (BRICS currency discussions ongoing, no breakthrough yet). Alternative to IMF/World Bank for development finance. China and Russia driving agenda — India must assert its own priorities.</p><h4>INDIA'S POSITION</h4><p>India uses BRICS to represent Global South interests but resists China-Russia domination. India simultaneously in Quad (US, Japan, Australia). This dual membership = Strategic Autonomy perfectly illustrated. Perfect SSB answer: India maintains independent foreign policy based on national interest, not bloc loyalty.</p>`}
+  },
+];
+
+// ── RSS PROXY FEEDS ────────────────────────────────────────────────────────
+const RSS_FEEDS = [
+  { url:'https://feeds.feedburner.com/ndtvnews-india-news', name:'NDTV', cat:'india' },
+  { url:'https://timesofindia.indiatimes.com/rssfeeds/296589292.cms', name:'TOI INDIA', cat:'india' },
+  { url:'https://www.thehindu.com/news/national/feeder/default.rss', name:'THE HINDU', cat:'india' },
+  { url:'https://www.thehindu.com/news/international/feeder/default.rss', name:'HINDU WORLD', cat:'geopolitics' },
+  { url:'https://feeds.feedburner.com/ndtvnews-world-news', name:'NDTV WORLD', cat:'geopolitics' },
+  { url:'https://ssbcrack.com/feed', name:'SSBCRACK', cat:'defence' },
+];
+
+const CORS_PROXY = 'https://api.rss2json.com/v1/api.json?rss_url=';
+
+// SSB relevance scorer
+function ssbScore(title, desc){
+  const text = (title+' '+(desc||'')).toLowerCase();
+  const highKw = ['india','defence','military','army','navy','air force','china','pakistan','iran','israel','nuclear','border','lac','war','attack','missile','security','terrorism','ceasefire','operation','coup','conflict','strategic'];
+  const medKw = ['economy','gdp','budget','trade','oil','election','government','policy','minister','summit','un','nato','brics','quad','scco'];
+  let s = 30;
+  highKw.forEach(k=>{ if(text.includes(k)) s+=8; });
+  medKw.forEach(k=>{ if(text.includes(k)) s+=4; });
+  return Math.min(s, 99);
+}
+
+function scoreClass(s){ return s>=80?'score-high':s>=55?'score-med':'score-low'; }
+
+function categorize(title, feedCat){
+  const t = title.toLowerCase();
+  if(/army|navy|air force|military|missile|nuclear|defence|weapon|soldier|war|attack|terror|isro|drdo/.test(t)) return 'defence';
+  if(/china|pakistan|iran|israel|russia|ukraine|us |usa|nato|brics|un |sanctions|geopolit/.test(t)) return 'geopolitics';
+  if(/india|modi|parliament|rupee|gdp|inflation|budget|election|kashmir|northeast/.test(t)) return 'india';
+  if(/economy|trade|market|stock|growth|imf|world bank|oil|petrol/.test(t)) return 'economy';
+  if(/social|education|health|climate|women|youth|agnipath|scheme|policy/.test(t)) return 'social';
+  return feedCat || 'india';
+}
+
+function timeAgo(dateStr){
+  if(!dateStr) return 'Recent';
+  const d = new Date(dateStr);
+  const now = new Date();
+  const mins = Math.floor((now-d)/60000);
+  if(isNaN(mins)) return dateStr.slice(0,10);
+  if(mins<60) return mins+'m ago';
+  if(mins<1440) return Math.floor(mins/60)+'h ago';
+  return Math.floor(mins/1440)+'d ago';
+}
+
+async function fetchFeed(feed){
+  try {
+    const res = await fetch(CORS_PROXY + encodeURIComponent(feed.url), {signal: AbortSignal.timeout(6000)});
+    const data = await res.json();
+    if(data.status !== 'ok' || !data.items) return [];
+    return data.items.slice(0,8).map(item => ({
+      title: item.title,
+      source: feed.name,
+      time: timeAgo(item.pubDate),
+      category: categorize(item.title, feed.cat),
+      score: ssbScore(item.title, item.description),
+      scoreClass: scoreClass(ssbScore(item.title, item.description)),
+      summary: item.description ? item.description.replace(/<[^>]+>/g,'').slice(0,160)+'...' : '',
+      link: item.link,
+      gdTags: [],
+      detail: null
+    }));
+  } catch(e){ return []; }
+}
+
+async function loadAllFeeds(){
+  const btn = document.getElementById('refresh-btn');
+  btn.textContent = '↻'; btn.style.transform='rotate(0deg)'; btn.classList.add('spinning');
+
+  document.getElementById('news-feed').innerHTML = '<div class="loading-row">▌ FETCHING LIVE FEEDS...</div>';
+
+  // Start with curated news immediately
+  allNews = [...curatedNews];
+  renderNews();
+
+  // Then fetch live RSS
+  const results = await Promise.allSettled(RSS_FEEDS.map(f => fetchFeed(f)));
+  results.forEach(r => {
+    if(r.status === 'fulfilled' && r.value.length > 0){
+      allNews = [...allNews, ...r.value];
+    }
+  });
+
+  // Sort by SSB score desc
+  allNews.sort((a,b) => b.score - a.score);
+
+  updateCounts();
+  renderNews();
+  updateTicker();
+
+  btn.classList.remove('spinning');
+  btn.textContent = '↻ REFRESH';
+}
+
+function updateCounts(){
+  const cats = ['defence','geopolitics','india','economy','social'];
+  document.getElementById('cnt-all').textContent = allNews.length;
+  cats.forEach(c => {
+    const el = document.getElementById('cnt-'+c);
+    if(el) el.textContent = allNews.filter(n=>n.category===c).length;
+  });
+  document.getElementById('news-count').textContent = `${allNews.length} ITEMS`;
+}
+
+function renderNews(){
+  const feed = document.getElementById('news-feed');
+  const filtered = currentFilter==='all' ? allNews : allNews.filter(n=>n.category===currentFilter);
+  if(filtered.length===0){ feed.innerHTML='<div class="loading-row">▌ NO ITEMS IN THIS CATEGORY</div>'; return; }
+
+  feed.innerHTML = '';
+  filtered.forEach((n,i) => {
+    const div = document.createElement('div');
+    div.className = `news-item fade-in ${n.scoreClass==='score-high'?'alert-high':n.scoreClass==='score-med'?'alert-med':'alert-low'}`;
+    div.style.animationDelay = (i*0.03)+'s';
+    const tags = n.gdTags.map(t=>`<span class="gd-tag">${t}</span>`).join('');
+    div.innerHTML = `
+      <div class="news-meta">
+        <span class="news-source">${n.source}</span>
+        <span class="news-time">${n.time}</span>
+        <span class="news-category cat-${n.category}">${n.category}</span>
+      </div>
+      <div class="news-title">${n.title}</div>
+      <div class="ssb-score ${n.scoreClass}">
+        <span class="ssb-label">SSB▸</span>
+        <div class="ssb-bar-wrap"><div class="ssb-bar" style="width:${n.score}%"></div></div>
+        <span class="ssb-num">${n.score}</span>
+      </div>
+      ${n.summary ? `<div class="news-summary">${n.summary}${tags ? '<br><br>'+tags : ''}</div>` : ''}
+    `;
+    div.onclick = () => {
+      if(n.detail){
+        showDetail(n.detail);
+      } else {
+        div.classList.toggle('expanded');
+        if(n.link) div.querySelector('.news-title').onclick = (e) => { e.stopPropagation(); window.open(n.link,'_blank'); };
+      }
+    };
+    feed.appendChild(div);
+  });
+  document.getElementById('news-count').textContent = `${filtered.length} ITEMS`;
+}
+
+function filterNews(cat, btn){
+  currentFilter = cat;
+  document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderNews();
+}
+
+function updateTicker(){
+  const top = allNews.slice(0,12).map(n=>`● ${n.title}`).join(' &nbsp;&nbsp; ');
+  const t = document.getElementById('ticker-text');
+  t.innerHTML = top + ' &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ' + top;
+}
+
+function showDetail(detail){
+  document.getElementById('detail-content').innerHTML = `<h2>${detail.title}</h2><div class="detail-body">${detail.body}</div>`;
+  document.getElementById('detail-overlay').classList.add('show');
+}
+
+function closeDetail(){
+  document.getElementById('detail-overlay').classList.remove('show');
+}
+
+// Close detail on overlay click
+document.getElementById('detail-overlay').addEventListener('click', function(e){
+  if(e.target === this) closeDetail();
+});
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+renderGD();
+loadAllFeeds();
+// Auto-refresh every 10 minutes
+setInterval(loadAllFeeds, 600000);
+</script>
+</body>
+</html>
